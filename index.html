@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Min Sparapp</title>
 </head>
+
 <body>
   <h1>💰 Min Sparapp</h1>
 
@@ -13,37 +14,90 @@
 
   <input type="number" id="amount" placeholder="Skriv belopp">
 
-  <button onclick="saveMoney()">Spara pengar</button>
-  <button onclick="removeMoney()">Ta bort pengar</button>
+  <button onclick="saveMoney()">🟢 Spara pengar</button>
+  <button onclick="spendMoney()">🔴 Slösa pengar</button>
+
+  <h2>📜 Historik</h2>
+  <div id="history"></div>
 
   <script>
     let saved = Number(localStorage.getItem("savedMoney")) || 0;
+    let history = JSON.parse(localStorage.getItem("moneyHistory")) || [];
 
-    document.getElementById("saved").textContent = saved;
+    function updateDisplay() {
+      document.getElementById("saved").textContent = saved;
+      showHistory();
+    }
 
     function saveMoney() {
       const amount = Number(document.getElementById("amount").value);
 
       if (amount > 0) {
         saved += amount;
+
+        history.push({
+          type: "Sparade",
+          amount: amount,
+          date: new Date().toLocaleString("sv-SE")
+        });
+
         localStorage.setItem("savedMoney", saved);
-        document.getElementById("saved").textContent = saved;
+        localStorage.setItem("moneyHistory", JSON.stringify(history));
+
         document.getElementById("amount").value = "";
+        updateDisplay();
       }
     }
 
-    function removeMoney() {
+    function spendMoney() {
       const amount = Number(document.getElementById("amount").value);
 
       if (amount > 0 && amount <= saved) {
         saved -= amount;
+
+        history.push({
+          type: "Slösade",
+          amount: amount,
+          date: new Date().toLocaleString("sv-SE")
+        });
+
         localStorage.setItem("savedMoney", saved);
-        document.getElementById("saved").textContent = saved;
+        localStorage.setItem("moneyHistory", JSON.stringify(history));
+
         document.getElementById("amount").value = "";
+        updateDisplay();
+
       } else if (amount > saved) {
-        alert("Du kan inte ta bort mer pengar än du har sparat!");
+        alert("Du har inte så mycket pengar sparade!");
       }
     }
+
+    function showHistory() {
+      const historyElement = document.getElementById("history");
+
+      if (history.length === 0) {
+        historyElement.innerHTML = "<p>Ingen historik ännu.</p>";
+        return;
+      }
+
+      historyElement.innerHTML = "";
+
+      history.slice().reverse().forEach(item => {
+        const row = document.createElement("p");
+
+        if (item.type === "Sparade") {
+          row.textContent =
+            "🟢 Sparade +" + item.amount + " kr — " + item.date;
+        } else {
+          row.textContent =
+            "🔴 Slösade -" + item.amount + " kr — " + item.date;
+        }
+
+        historyElement.appendChild(row);
+      });
+    }
+
+    updateDisplay();
   </script>
 </body>
 </html>
