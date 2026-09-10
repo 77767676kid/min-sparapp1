@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -11,7 +12,9 @@
   <h2>Sparat: <span id="saved">0</span> kr</h2>
 
   <input type="number" id="amount" placeholder="Skriv belopp">
+
   <button onclick="saveMoney()">Spara pengar</button>
+  <button onclick="removeMoney()">Ta bort pengar</button>
 
   <script>
     let saved = Number(localStorage.getItem("savedMoney")) || 0;
@@ -28,7 +31,20 @@
         document.getElementById("amount").value = "";
       }
     }
+
+    function removeMoney() {
+      const amount = Number(document.getElementById("amount").value);
+
+      if (amount > 0 && amount <= saved) {
+        saved -= amount;
+        localStorage.setItem("savedMoney", saved);
+        document.getElementById("saved").textContent = saved;
+        document.getElementById("amount").value = "";
+      } else if (amount > saved) {
+        alert("Du kan inte ta bort mer pengar än du har sparat!");
+      }
+    }
   </script>
 </body>
 </html>
-
+```
