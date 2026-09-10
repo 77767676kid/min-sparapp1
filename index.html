@@ -1,4 +1,4 @@
-Minchan company
+Minchan Company
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -99,6 +99,12 @@ Minchan company
       gap: 10px;
     }
 
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
     button {
       width: 100%;
       border: none;
@@ -108,12 +114,6 @@ Minchan company
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
-    }
-
-    .buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
     }
 
     .save {
@@ -172,6 +172,12 @@ Minchan company
       padding: 20px;
     }
 
+    .loading {
+      text-align: center;
+      color: #6b7280;
+      padding: 20px;
+    }
+
     @media (max-width: 400px) {
       .buttons,
       .date-time {
@@ -196,7 +202,7 @@ Minchan company
   </div>
 
   <div class="balance-card">
-    <p>Mitt saldo</p>
+    <p>Gemensamt saldo</p>
     <div class="balance">
       <span id="saved">0.00</span> kr
     </div>
@@ -252,352 +258,606 @@ Minchan company
 
     <h2>📜 Historik</h2>
 
-    <div id="history"></div>
+    <div id="history">
+      <div class="loading">Laddar...</div>
+    </div>
 
   </div>
 
 </div>
 
-
 <script>
 
-  let saved =
-    Number(localStorage.getItem("savedMoney")) || 0;
+const API_URL =
+"https://script.google.com/macros/s/AKfycbywchnjIFl8z8YqUAu-6yALEP7ot3shWpASNZNSX7Q8S9uhG4eABmGVczZKkJr-tvfy/exec";
 
-  let history =
-    JSON.parse(localStorage.getItem("moneyHistory")) || [];
-
-
-  // Sätt dagens datum och aktuell tid automatiskt
-  function setCurrentDateTime() {
-
-    const now = new Date();
-
-    const year = now.getFullYear();
-
-    const month =
-      String(now.getMonth() + 1).padStart(2, "0");
-
-    const day =
-      String(now.getDate()).padStart(2, "0");
-
-    const hours =
-      String(now.getHours()).padStart(2, "0");
-
-    const minutes =
-      String(now.getMinutes()).padStart(2, "0");
-
-    document.getElementById("date").value =
-      `${year}-${month}-${day}`;
-
-    document.getElementById("time").value =
-      `${hours}:${minutes}`;
-  }
+let history = [];
 
 
-  function updateDisplay() {
+/* =========================
+   DATUM OCH TID
+========================= */
 
-    document.getElementById("saved").textContent =
-      saved.toFixed(2);
+function setCurrentDateTime() {
 
-    showHistory();
-  }
+  const now = new Date();
 
+  const year = now.getFullYear();
 
-  function getInput() {
+  const month =
+    String(now.getMonth() + 1).padStart(2, "0");
 
-    const amount =
-      Number(document.getElementById("amount").value);
+  const day =
+    String(now.getDate()).padStart(2, "0");
 
-    const description =
-      document.getElementById("description").value.trim();
+  const hours =
+    String(now.getHours()).padStart(2, "0");
 
-    const date =
-      document.getElementById("date").value;
+  const minutes =
+    String(now.getMinutes()).padStart(2, "0");
 
-    const time =
-      document.getElementById("time").value;
+  document.getElementById("date").value =
+    `${year}-${month}-${day}`;
 
-    return {
-      amount,
-      description,
-      date,
-      time
-    };
-  }
+  document.getElementById("time").value =
+    `${hours}:${minutes}`;
+}
 
 
-  function clearInputs() {
+/* =========================
+   HÄMTA DATA FRÅN GOOGLE SHEETS
+========================= */
 
-    document.getElementById("amount").value = "";
+async function loadData() {
 
-    document.getElementById("description").value = "";
+  try {
 
-    setCurrentDateTime();
-  }
+    const response =
+      await fetch(API_URL);
 
+    const data =
+      await response.json();
 
-  function saveMoney() {
+    history = [];
 
-    const {
-      amount,
-      description,
-      date,
-      time
-    } = getInput();
+    /*
+      Första raden är rubriker:
+      Typ | Belopp | Beskrivning | Datum | Tid
+    */
 
+    for (let i = 1; i < data.length; i++) {
 
-    if (amount <= 0) {
+      const row = data[i];
 
-      alert("Skriv ett belopp som är större än 0.");
+      if (!row[0]) continue;
 
-      return;
+      history.push({
+
+        type: String(row[0]),
+
+        amount: Number(row[1]) || 0,
+
+        description: String(row[2] || ""),
+
+        date: formatSheetDate(row[3]),
+
+        time: formatSheetTime(row[4])
+
+      });
+
     }
 
+    updateDisplay();
 
-    if (description === "") {
+  } catch (error) {
 
-      alert("Skriv vad du sparade pengarna på.");
+    console.error(error);
 
-      return;
+    document.getElementById("history").innerHTML =
+      '<div class="empty">Kunde inte ladda sparandet.</div>';
+
+  }
+
+}
+
+
+/* =========================
+   KONVERTERA DATUM
+========================= */
+
+function formatSheetDate(value) {
+
+  if (!value) return "";
+
+  if (value instanceof Date) {
+
+    return value.toISOString().slice(0, 10);
+
+  }
+
+  const text = String(value);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+
+    return text;
+
+  }
+
+  return text;
+
+}
+
+
+/* =========================
+   KONVERTERA TID
+========================= */
+
+function formatSheetTime(value) {
+
+  if (!value) return "";
+
+  const text = String(value);
+
+  if (/^\d{1,2}:\d{2}/.test(text)) {
+
+    const parts = text.split(":");
+
+    return String(parts[0]).padStart(2, "0")
+      + ":"
+      + String(parts[1]).padStart(2, "0");
+
+  }
+
+  return text;
+
+}
+
+
+/* =========================
+   RÄKNA SALDO
+========================= */
+
+function calculateBalance() {
+
+  let balance = 0;
+
+  history.forEach(item => {
+
+    if (item.type === "Sparade") {
+
+      balance += Number(item.amount);
+
     }
 
+    if (item.type === "Slösade") {
 
-    if (!date || !time) {
+      balance -= Number(item.amount);
 
-      alert("Välj datum och tid.");
-
-      return;
     }
 
+  });
 
-    saved += amount;
+  return balance;
+
+}
 
 
-    history.push({
+/* =========================
+   SKICKA NY HÄNDELSE
+========================= */
 
-      type: "Sparade",
+async function addTransaction(
+  type,
+  amount,
+  description,
+  date,
+  time
+) {
 
-      amount: amount,
+  const data = {
 
-      description: description,
+    type: type,
 
-      date: date,
+    amount: amount,
 
-      time: time
+    description: description,
+
+    date: date,
+
+    time: time
+
+  };
+
+  try {
+
+    await fetch(API_URL, {
+
+      method: "POST",
+
+      mode: "no-cors",
+
+      headers: {
+        "Content-Type": "text/plain"
+      },
+
+      body: JSON.stringify(data)
 
     });
 
-
-    localStorage.setItem(
-      "savedMoney",
-      saved
-    );
-
-
-    localStorage.setItem(
-      "moneyHistory",
-      JSON.stringify(history)
-    );
-
+    alert("Klart! 💰");
 
     clearInputs();
 
-    updateDisplay();
+    /*
+      Vänta lite så Google Sheets hinner spara.
+    */
+
+    setTimeout(loadData, 1000);
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("Något gick fel. Försök igen.");
+
   }
 
+}
 
-  function spendMoney() {
 
-    const {
-      amount,
-      description,
-      date,
-      time
-    } = getInput();
+/* =========================
+   SPARA PENGAR
+========================= */
 
+async function saveMoney() {
 
-    if (amount <= 0) {
+  const amount =
+    Number(document.getElementById("amount").value);
 
-      alert("Skriv ett belopp som är större än 0.");
+  const description =
+    document.getElementById("description").value.trim();
 
-      return;
-    }
+  const date =
+    document.getElementById("date").value;
 
+  const time =
+    document.getElementById("time").value;
 
-    if (description === "") {
 
-      alert("Skriv vad du slösade pengarna på.");
+  if (amount <= 0) {
 
-      return;
-    }
+    alert("Skriv ett belopp som är större än 0.");
 
-
-    if (!date || !time) {
-
-      alert("Välj datum och tid.");
-
-      return;
-    }
-
-
-    if (amount > saved) {
-
-      alert("Du har inte så mycket pengar sparade!");
-
-      return;
-    }
-
-
-    saved -= amount;
-
-
-    history.push({
-
-      type: "Slösade",
-
-      amount: amount,
-
-      description: description,
-
-      date: date,
-
-      time: time
-
-    });
-
-
-    localStorage.setItem(
-      "savedMoney",
-      saved
-    );
-
-
-    localStorage.setItem(
-      "moneyHistory",
-      JSON.stringify(history)
-    );
-
-
-    clearInputs();
-
-    updateDisplay();
-  }
-
-
-  function showHistory() {
-
-    const historyElement =
-      document.getElementById("history");
-
-
-    if (history.length === 0) {
-
-      historyElement.innerHTML =
-        '<div class="empty">Ingen historik ännu 📭</div>';
-
-      return;
-    }
-
-
-    historyElement.innerHTML = "";
-
-
-    history.slice().reverse().forEach(item => {
-
-      const row =
-        document.createElement("div");
-
-
-      const isSaved =
-        item.type === "Sparade";
-
-
-      row.className =
-        "history-item " +
-        (isSaved ? "saved" : "spent");
-
-
-      const sign =
-        isSaved ? "+" : "-";
-
-
-      const emoji =
-        isSaved ? "🟢" : "🔴";
-
-
-      const textClass =
-        isSaved ? "saved-text" : "spent-text";
-
-
-      row.innerHTML = `
-
-        <div class="history-top">
-
-          <span>
-            ${emoji} ${item.type}
-          </span>
-
-          <span class="${textClass}">
-            ${sign}${Number(item.amount).toFixed(2)} kr
-          </span>
-
-        </div>
-
-        <div class="description">
-          ${escapeHTML(item.description)}
-        </div>
-
-        <div class="date">
-          📅 ${formatDate(item.date)}
-          &nbsp; 🕐 ${item.time}
-        </div>
-
-      `;
-
-
-      historyElement.appendChild(row);
-
-    });
+    return;
 
   }
 
 
-  function formatDate(date) {
+  if (!description) {
 
-    const parts = date.split("-");
+    alert("Skriv vad du sparade pengarna på.");
 
-    if (parts.length === 3) {
+    return;
 
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-
-    }
-
-    return date;
   }
 
 
-  function escapeHTML(text) {
+  if (!date || !time) {
 
-    const div =
-      document.createElement("div");
+    alert("Välj datum och tid.");
 
-    div.textContent = text;
+    return;
 
-    return div.innerHTML;
   }
 
+
+  await addTransaction(
+    "Sparade",
+    amount,
+    description,
+    date,
+    time
+  );
+
+}
+
+
+/* =========================
+   SLÖSA PENGAR
+========================= */
+
+async function spendMoney() {
+
+  const amount =
+    Number(document.getElementById("amount").value);
+
+  const description =
+    document.getElementById("description").value.trim();
+
+  const date =
+    document.getElementById("date").value;
+
+  const time =
+    document.getElementById("time").value;
+
+
+  if (amount <= 0) {
+
+    alert("Skriv ett belopp som är större än 0.");
+
+    return;
+
+  }
+
+
+  if (!description) {
+
+    alert("Skriv vad du slösade pengarna på.");
+
+    return;
+
+  }
+
+
+  if (!date || !time) {
+
+    alert("Välj datum och tid.");
+
+    return;
+
+  }
+
+
+  const balance =
+    calculateBalance();
+
+
+  if (amount > balance) {
+
+    alert("Det finns inte så mycket pengar sparade!");
+
+    return;
+
+  }
+
+
+  await addTransaction(
+    "Slösade",
+    amount,
+    description,
+    date,
+    time
+  );
+
+}
+
+
+/* =========================
+   RADERA INPUT
+========================= */
+
+function clearInputs() {
+
+  document.getElementById("amount").value = "";
+
+  document.getElementById("description").value = "";
 
   setCurrentDateTime();
 
-  updateDisplay();
+}
+
+
+/* =========================
+   SORTERING
+========================= */
+
+function getEventTime(item) {
+
+  if (
+    item.date &&
+    item.time &&
+    /^\d{4}-\d{2}-\d{2}$/.test(item.date)
+  ) {
+
+    const result =
+      new Date(
+        `${item.date}T${item.time}`
+      ).getTime();
+
+    if (!Number.isNaN(result)) {
+
+      return result;
+
+    }
+
+  }
+
+  return 0;
+
+}
+
+
+/* =========================
+   VISA ALLT
+========================= */
+
+function updateDisplay() {
+
+  const balance =
+    calculateBalance();
+
+  document.getElementById("saved").textContent =
+    balance.toFixed(2);
+
+  showHistory();
+
+}
+
+
+/* =========================
+   VISA HISTORIK
+========================= */
+
+function showHistory() {
+
+  const historyElement =
+    document.getElementById("history");
+
+
+  if (history.length === 0) {
+
+    historyElement.innerHTML =
+      '<div class="empty">Ingen historik ännu 📭</div>';
+
+    return;
+
+  }
+
+
+  /*
+    Senaste datum/tid först.
+  */
+
+  const sortedHistory =
+    [...history].sort(
+      (a, b) =>
+        getEventTime(b) - getEventTime(a)
+    );
+
+
+  historyElement.innerHTML = "";
+
+
+  sortedHistory.forEach(item => {
+
+    const row =
+      document.createElement("div");
+
+
+    const isSaved =
+      item.type === "Sparade";
+
+
+    row.className =
+      "history-item " +
+      (isSaved ? "saved" : "spent");
+
+
+    const sign =
+      isSaved ? "+" : "-";
+
+
+    const emoji =
+      isSaved ? "🟢" : "🔴";
+
+
+    const textClass =
+      isSaved ? "saved-text" : "spent-text";
+
+
+    row.innerHTML = `
+
+      <div class="history-top">
+
+        <span>
+          ${emoji} ${item.type}
+        </span>
+
+        <span class="${textClass}">
+          ${sign}${Number(item.amount).toFixed(2)} kr
+        </span>
+
+      </div>
+
+      <div class="description">
+        ${escapeHTML(item.description)}
+      </div>
+
+      <div class="date">
+        📅 ${formatDate(item.date)}
+        &nbsp; 🕐 ${item.time || ""}
+      </div>
+
+    `;
+
+
+    historyElement.appendChild(row);
+
+  });
+
+}
+
+
+/* =========================
+   VISA DATUM
+========================= */
+
+function formatDate(date) {
+
+  if (!date) return "";
+
+  const parts =
+    String(date).split("-");
+
+
+  if (parts.length === 3) {
+
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  }
+
+
+  return date;
+
+}
+
+
+/* =========================
+   SÄKER TEXT
+========================= */
+
+function escapeHTML(text) {
+
+  const div =
+    document.createElement("div");
+
+  div.textContent =
+    text;
+
+  return div.innerHTML;
+
+}
+
+
+/* =========================
+   START
+========================= */
+
+setCurrentDateTime();
+
+loadData();
+
+
+/*
+  Uppdatera automatiskt var 10:e sekund.
+  Då kan andra personer se nya ändringar.
+*/
+
+setInterval(loadData, 10000);
+
+
+/*
+  Service Worker
+*/
+
+if ("serviceWorker" in navigator) {
+
+  navigator.serviceWorker.register("./sw.js");
+
+}
 
 </script>
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js");
-}
-</script>
+
 </body>
 </html>
 ```
