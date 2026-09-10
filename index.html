@@ -1,10 +1,9 @@
-Minchan
+Minchan company
 <!DOCTYPE html>
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Min Sparapp</title>
 
   <style>
@@ -59,7 +58,6 @@ Minchan
     .balance-card p {
       margin: 0 0 8px;
       opacity: 0.9;
-      font-size: 16px;
     }
 
     .balance {
@@ -82,17 +80,33 @@ Minchan
 
     input {
       width: 100%;
-      padding: 15px;
+      padding: 14px;
       margin-bottom: 12px;
       border: 2px solid #e5e7eb;
       border-radius: 14px;
       font-size: 16px;
       outline: none;
-      transition: 0.2s;
     }
 
     input:focus {
       border-color: #42a5f5;
+    }
+
+    .date-time {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      padding: 15px;
+      border-radius: 14px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
     }
 
     .buttons {
@@ -101,42 +115,12 @@ Minchan
       gap: 10px;
     }
 
-    button {
-      border: none;
-      padding: 15px 10px;
-      border-radius: 14px;
-      color: white;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.15s, opacity 0.15s;
-    }
-
-    button:hover {
-      opacity: 0.9;
-      transform: translateY(-2px);
-    }
-
     .save {
       background: #22c55e;
     }
 
     .spend {
       background: #ef4444;
-    }
-
-    .history-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .history-title h2 {
-      margin: 0;
-    }
-
-    #history {
-      margin-top: 15px;
     }
 
     .history-item {
@@ -172,24 +156,24 @@ Minchan
 
     .description {
       margin-top: 7px;
-      font-size: 15px;
       color: #374151;
     }
 
     .date {
       margin-top: 7px;
-      font-size: 12px;
-      color: #9ca3af;
+      font-size: 13px;
+      color: #6b7280;
     }
 
     .empty {
       text-align: center;
       color: #9ca3af;
-      padding: 20px 5px;
+      padding: 20px;
     }
 
     @media (max-width: 400px) {
-      .buttons {
+      .buttons,
+      .date-time {
         grid-template-columns: 1fr;
       }
 
@@ -202,279 +186,412 @@ Minchan
 
 <body>
 
-  <div class="app">
+<div class="app">
 
-    <div class="header">
-      <div class="icon">💰</div>
-      <h1>Min Sparapp</h1>
-      <p>Håll koll på dina pengar</p>
+  <div class="header">
+    <div class="icon">💰</div>
+    <h1>Min Sparapp</h1>
+    <p>Håll koll på dina pengar</p>
+  </div>
+
+  <div class="balance-card">
+    <p>Mitt saldo</p>
+    <div class="balance">
+      <span id="saved">0.00</span> kr
     </div>
+  </div>
 
-    <div class="balance-card">
-      <p>Mitt saldo</p>
-      <div class="balance">
-        <span id="saved">0.00</span> kr
-      </div>
-    </div>
+  <div class="box">
 
-    <div class="box">
-      <h2>💸 Ny händelse</h2>
+    <h2>💸 Ny händelse</h2>
+
+    <input
+      type="number"
+      id="amount"
+      placeholder="Belopp (kr)"
+      min="0"
+      step="0.01"
+    >
+
+    <input
+      type="text"
+      id="description"
+      placeholder="Vad sparade/slösade du på?"
+    >
+
+    <div class="date-time">
 
       <input
-        type="number"
-        id="amount"
-        placeholder="Belopp (kr)"
-        min="0"
-        step="0.01"
+        type="date"
+        id="date"
       >
 
       <input
-        type="text"
-        id="description"
-        placeholder="Vad sparade/slösade du på?"
+        type="time"
+        id="time"
       >
 
-      <div class="buttons">
-        <button class="save" onclick="saveMoney()">
-          🟢 Spara
-        </button>
-
-        <button class="spend" onclick="spendMoney()">
-          🔴 Slösa
-        </button>
-      </div>
     </div>
 
-    <div class="box">
+    <div class="buttons">
 
-      <div class="history-title">
-        <h2>📜 Historik</h2>
-      </div>
+      <button class="save" onclick="saveMoney()">
+        🟢 Spara
+      </button>
 
-      <div id="history"></div>
+      <button class="spend" onclick="spendMoney()">
+        🔴 Slösa
+      </button>
 
     </div>
 
   </div>
 
-  <script>
+  <div class="box">
 
-    let saved =
-      Number(localStorage.getItem("savedMoney")) || 0;
+    <h2>📜 Historik</h2>
 
-    let history =
-      JSON.parse(localStorage.getItem("moneyHistory")) || [];
+    <div id="history"></div>
+
+  </div>
+
+</div>
 
 
-    function updateDisplay() {
+<script>
 
-      document.getElementById("saved").textContent =
-        saved.toFixed(2);
+  let saved =
+    Number(localStorage.getItem("savedMoney")) || 0;
 
-      showHistory();
+  let history =
+    JSON.parse(localStorage.getItem("moneyHistory")) || [];
+
+
+  // Sätt dagens datum och aktuell tid automatiskt
+  function setCurrentDateTime() {
+
+    const now = new Date();
+
+    const year = now.getFullYear();
+
+    const month =
+      String(now.getMonth() + 1).padStart(2, "0");
+
+    const day =
+      String(now.getDate()).padStart(2, "0");
+
+    const hours =
+      String(now.getHours()).padStart(2, "0");
+
+    const minutes =
+      String(now.getMinutes()).padStart(2, "0");
+
+    document.getElementById("date").value =
+      `${year}-${month}-${day}`;
+
+    document.getElementById("time").value =
+      `${hours}:${minutes}`;
+  }
+
+
+  function updateDisplay() {
+
+    document.getElementById("saved").textContent =
+      saved.toFixed(2);
+
+    showHistory();
+  }
+
+
+  function getInput() {
+
+    const amount =
+      Number(document.getElementById("amount").value);
+
+    const description =
+      document.getElementById("description").value.trim();
+
+    const date =
+      document.getElementById("date").value;
+
+    const time =
+      document.getElementById("time").value;
+
+    return {
+      amount,
+      description,
+      date,
+      time
+    };
+  }
+
+
+  function clearInputs() {
+
+    document.getElementById("amount").value = "";
+
+    document.getElementById("description").value = "";
+
+    setCurrentDateTime();
+  }
+
+
+  function saveMoney() {
+
+    const {
+      amount,
+      description,
+      date,
+      time
+    } = getInput();
+
+
+    if (amount <= 0) {
+
+      alert("Skriv ett belopp som är större än 0.");
+
+      return;
     }
 
 
-    function getInput() {
+    if (description === "") {
 
-      const amount =
-        Number(document.getElementById("amount").value);
+      alert("Skriv vad du sparade pengarna på.");
 
-      const description =
-        document.getElementById("description").value.trim();
-
-      return {
-        amount,
-        description
-      };
+      return;
     }
 
 
-    function clearInputs() {
+    if (!date || !time) {
 
-      document.getElementById("amount").value = "";
+      alert("Välj datum och tid.");
 
-      document.getElementById("description").value = "";
+      return;
     }
 
 
-    function saveMoney() {
+    saved += amount;
 
-      const { amount, description } = getInput();
 
-      if (amount <= 0) {
-        alert("Skriv ett belopp som är större än 0.");
-        return;
-      }
+    history.push({
 
-      if (description === "") {
-        alert("Skriv vad du sparade pengarna till.");
-        return;
-      }
+      type: "Sparade",
 
-      saved += amount;
+      amount: amount,
 
-      history.push({
+      description: description,
 
-        type: "Sparade",
+      date: date,
 
-        amount: amount,
+      time: time
 
-        description: description,
+    });
 
-        date: new Date().toLocaleString("sv-SE")
 
-      });
+    localStorage.setItem(
+      "savedMoney",
+      saved
+    );
 
-      localStorage.setItem(
-        "savedMoney",
-        saved
-      );
 
-      localStorage.setItem(
-        "moneyHistory",
-        JSON.stringify(history)
-      );
+    localStorage.setItem(
+      "moneyHistory",
+      JSON.stringify(history)
+    );
 
-      clearInputs();
 
-      updateDisplay();
-    }
-
-
-    function spendMoney() {
-
-      const { amount, description } = getInput();
-
-      if (amount <= 0) {
-        alert("Skriv ett belopp som är större än 0.");
-        return;
-      }
-
-      if (description === "") {
-        alert("Skriv vad du slösade pengarna på.");
-        return;
-      }
-
-      if (amount > saved) {
-        alert("Du har inte så mycket pengar sparade!");
-        return;
-      }
-
-      saved -= amount;
-
-      history.push({
-
-        type: "Slösade",
-
-        amount: amount,
-
-        description: description,
-
-        date: new Date().toLocaleString("sv-SE")
-
-      });
-
-      localStorage.setItem(
-        "savedMoney",
-        saved
-      );
-
-      localStorage.setItem(
-        "moneyHistory",
-        JSON.stringify(history)
-      );
-
-      clearInputs();
-
-      updateDisplay();
-    }
-
-
-    function showHistory() {
-
-      const historyElement =
-        document.getElementById("history");
-
-      if (history.length === 0) {
-
-        historyElement.innerHTML =
-          '<div class="empty">Ingen historik ännu 📭</div>';
-
-        return;
-      }
-
-      historyElement.innerHTML = "";
-
-
-      history.slice().reverse().forEach(item => {
-
-        const row =
-          document.createElement("div");
-
-        const isSaved =
-          item.type === "Sparade";
-
-        row.className =
-          "history-item " +
-          (isSaved ? "saved" : "spent");
-
-
-        const sign =
-          isSaved ? "+" : "-";
-
-        const emoji =
-          isSaved ? "🟢" : "🔴";
-
-        const textClass =
-          isSaved ? "saved-text" : "spent-text";
-
-
-        row.innerHTML = `
-
-          <div class="history-top">
-
-            <span>
-              ${emoji} ${item.type}
-            </span>
-
-            <span class="${textClass}">
-              ${sign}${Number(item.amount).toFixed(2)} kr
-            </span>
-
-          </div>
-
-          <div class="description">
-            ${escapeHTML(item.description)}
-          </div>
-
-          <div class="date">
-            📅 ${item.date}
-          </div>
-
-        `;
-
-        historyElement.appendChild(row);
-
-      });
-
-    }
-
-
-    function escapeHTML(text) {
-
-      const div =
-        document.createElement("div");
-
-      div.textContent = text;
-
-      return div.innerHTML;
-    }
-
+    clearInputs();
 
     updateDisplay();
+  }
 
-  </script>
+
+  function spendMoney() {
+
+    const {
+      amount,
+      description,
+      date,
+      time
+    } = getInput();
+
+
+    if (amount <= 0) {
+
+      alert("Skriv ett belopp som är större än 0.");
+
+      return;
+    }
+
+
+    if (description === "") {
+
+      alert("Skriv vad du slösade pengarna på.");
+
+      return;
+    }
+
+
+    if (!date || !time) {
+
+      alert("Välj datum och tid.");
+
+      return;
+    }
+
+
+    if (amount > saved) {
+
+      alert("Du har inte så mycket pengar sparade!");
+
+      return;
+    }
+
+
+    saved -= amount;
+
+
+    history.push({
+
+      type: "Slösade",
+
+      amount: amount,
+
+      description: description,
+
+      date: date,
+
+      time: time
+
+    });
+
+
+    localStorage.setItem(
+      "savedMoney",
+      saved
+    );
+
+
+    localStorage.setItem(
+      "moneyHistory",
+      JSON.stringify(history)
+    );
+
+
+    clearInputs();
+
+    updateDisplay();
+  }
+
+
+  function showHistory() {
+
+    const historyElement =
+      document.getElementById("history");
+
+
+    if (history.length === 0) {
+
+      historyElement.innerHTML =
+        '<div class="empty">Ingen historik ännu 📭</div>';
+
+      return;
+    }
+
+
+    historyElement.innerHTML = "";
+
+
+    history.slice().reverse().forEach(item => {
+
+      const row =
+        document.createElement("div");
+
+
+      const isSaved =
+        item.type === "Sparade";
+
+
+      row.className =
+        "history-item " +
+        (isSaved ? "saved" : "spent");
+
+
+      const sign =
+        isSaved ? "+" : "-";
+
+
+      const emoji =
+        isSaved ? "🟢" : "🔴";
+
+
+      const textClass =
+        isSaved ? "saved-text" : "spent-text";
+
+
+      row.innerHTML = `
+
+        <div class="history-top">
+
+          <span>
+            ${emoji} ${item.type}
+          </span>
+
+          <span class="${textClass}">
+            ${sign}${Number(item.amount).toFixed(2)} kr
+          </span>
+
+        </div>
+
+        <div class="description">
+          ${escapeHTML(item.description)}
+        </div>
+
+        <div class="date">
+          📅 ${formatDate(item.date)}
+          &nbsp; 🕐 ${item.time}
+        </div>
+
+      `;
+
+
+      historyElement.appendChild(row);
+
+    });
+
+  }
+
+
+  function formatDate(date) {
+
+    const parts = date.split("-");
+
+    if (parts.length === 3) {
+
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+    }
+
+    return date;
+  }
+
+
+  function escapeHTML(text) {
+
+    const div =
+      document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+  }
+
+
+  setCurrentDateTime();
+
+  updateDisplay();
+
+</script>
 
 </body>
 </html>
