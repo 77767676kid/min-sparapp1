@@ -486,7 +486,93 @@ async function deleteTransaction(sheetRow) {
     alert("Kunde inte ta bort händelsen.");
   }
 }
+async function editTransaction(sheetRow) {
 
+  const item = history.find(x => x.sheetRow === sheetRow);
+
+  if (!item) {
+    alert("Händelsen hittades inte.");
+    return;
+  }
+
+  const newAmount = prompt("Ändra belopp:", item.amount);
+
+  if (newAmount === null) return;
+
+  const amount = Number(newAmount);
+
+  if (amount <= 0 || isNaN(amount)) {
+    alert("Skriv ett giltigt belopp.");
+    return;
+  }
+
+  const newDescription = prompt(
+    "Ändra beskrivning:",
+    item.description
+  );
+
+  if (newDescription === null) return;
+
+  if (!newDescription.trim()) {
+    alert("Beskrivningen får inte vara tom.");
+    return;
+  }
+
+  const newDate = prompt(
+    "Ändra datum (ÅÅÅÅ-MM-DD):",
+    item.date
+  );
+
+  if (newDate === null) return;
+
+  const newTime = prompt(
+    "Ändra tid:",
+    item.time
+  );
+
+  if (newTime === null) return;
+
+  try {
+
+    await fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain"
+      },
+      body: JSON.stringify({
+        action: "delete",
+        row: sheetRow
+      })
+    });
+
+    await fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain"
+      },
+      body: JSON.stringify({
+        action: "add",
+        type: item.type,
+        amount: amount,
+        description: newDescription.trim(),
+        date: newDate,
+        time: newTime
+      })
+    });
+
+    alert("Händelsen är ändrad! ✏️");
+
+    setTimeout(loadData, 1500);
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("Kunde inte ändra händelsen.");
+  }
+}
 function clearInputs() {
 
   document.getElementById("amount").value = "";
@@ -568,10 +654,10 @@ function showHistory() {
       </div>
 
       <button
-        class="delete-button"
-        onclick="deleteTransaction(${item.sheetRow})">
-        🗑️ Ta bort
-      </button>
+  class="delete-button"
+  onclick="editTransaction(${item.sheetRow})">
+  ✏️ Ändra
+</button>
 
     `;
 
