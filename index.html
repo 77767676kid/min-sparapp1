@@ -45,7 +45,23 @@
       color: #6b7280;
     }
 
-    .balance-card {
+    .balance-card {```css
+.balance-card {
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  color: white;
+  border-radius: 24px;
+  padding: 28px;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(25, 118, 210, 0.25);
+  margin-bottom: 20px;
+
+  /* Gör Gemensamt saldo fast när du scrollar */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+```
+
       background: linear-gradient(135deg, #1976d2, #42a5f5);
       color: white;
       border-radius: 24px;
