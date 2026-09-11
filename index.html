@@ -669,15 +669,29 @@ function formatDate(date) {
 
   if (!date) return "";
 
-  const parts =
-    String(date).split("-");
+  const value = String(date);
+
+  // Om datumet kommer från Google Sheets som ISO-datum
+  if (value.includes("T")) {
+    const d = new Date(value);
+
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  // Vanligt datum: ÅÅÅÅ-MM-DD
+  const parts = value.split("-");
 
   if (parts.length === 3) {
-
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
 
-  return date;
+  return value;
 }
 
 function escapeHTML(text) {
