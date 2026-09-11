@@ -541,19 +541,8 @@ async function editTransaction(sheetRow) {
         "Content-Type": "text/plain"
       },
       body: JSON.stringify({
-        action: "delete",
-        row: sheetRow
-      })
-    });
-
-    await fetch(API_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "text/plain"
-      },
-      body: JSON.stringify({
-        action: "add",
+        action: "edit",
+        row: sheetRow,
         type: item.type,
         amount: amount,
         description: newDescription.trim(),
@@ -564,7 +553,7 @@ async function editTransaction(sheetRow) {
 
     alert("Händelsen är ändrad! ✏️");
 
-    setTimeout(loadData, 1500);
+    setTimeout(loadData, 1000);
 
   } catch (error) {
 
